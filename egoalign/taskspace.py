@@ -9,6 +9,8 @@ MIDDLE_MCP, PINKY_MCP = 9, 17
 
 # Camera (x right, y down, z forward) to robot base (x forward, y left, z up).
 CAM_TO_ROBOT = np.array([[0.0, 0.0, 1.0], [-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
+# Hand frame to gripper frame: fingers close along the palm normal.
+HAND_TO_GRIPPER = np.array([[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
 
 
 @dataclasses.dataclass
@@ -110,7 +112,7 @@ def gripper_states(pinch, close_below, open_above):
 
 def to_trajectory(landmarks, fps, camera_rpy=(0.0, 0.0, 0.0),
                   home=(0.45, 0.0, 0.25), grip_threshold=0.04, window=5,
-                  left=False):
+                  left=False, extrinsics=None):
     """Maps camera-frame landmarks to a robot end-effector trajectory.
 
     Args:
@@ -125,15 +127,23 @@ def to_trajectory(landmarks, fps, camera_rpy=(0.0, 0.0, 0.0),
             closes [m]; it reopens above 1.5x this.
         window: Moving-average window in frames for jitter removal.
         left: True for a left hand.
+        extrinsics: Optional `register.Extrinsics`. When given, the
+            thumb-index midpoint is placed absolutely in the robot frame and
+            `camera_rpy` and `home` are ignored.
 
     Returns:
         A `Trajectory` in the robot base frame.
     """
     pts = smooth(fill_missing(landmarks), window)
-    to_robot = CAM_TO_ROBOT @ euler_to_matrix(camera_rpy)
-    wrist = pts[:, WRIST] @ to_robot.T
-    pos = wrist - wrist[0] + np.asarray(home)
-    rpy = matrix_to_euler(to_robot @ hand_frame(pts, left))
+    if extrinsics is None:
+        to_robot = CAM_TO_ROBOT @ euler_to_matrix(camera_rpy)
+        wrist = pts[:, WRIST] @ to_robot.T
+        pos = wrist - wrist[0] + np.asarray(home)
+    else:
+        to_robot = extrinsics.rot
+        grasp = (pts[:, THUMB_TIP] + pts[:, INDEX_TIP]) / 2
+        pos = extrinsics.to_robot(grasp)
+    rpy = matrix_to_euler(to_robot @ hand_frame(pts, left) @ HAND_TO_GRIPPER)
     pinch = np.linalg.norm(pts[:, THUMB_TIP] - pts[:, INDEX_TIP], axis=-1)
     grip = gripper_states(pinch, grip_threshold, 1.5 * grip_threshold)
     return Trajectory(np.hstack([pos, rpy]), grip, fps)
