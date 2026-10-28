@@ -232,3 +232,4 @@ CLAUDE.local.md
 ai-docs/*
 !ai-docs/.gitkeep
 egoalign_data/
+.scratch/
