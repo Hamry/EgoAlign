@@ -225,6 +225,7 @@ __marimo__/
 .claude/settings.local.json
 .claude/worktrees/
 CLAUDE.local.md
+.claude/
 
 # AI-specific documentation (local notes, research, plans for AI agents)
 #   Contents are ignored; .gitkeep keeps the folder present in clones.
