@@ -74,16 +74,30 @@ READY = np.array([0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785])
 class Panda:
     """Kinematics, IK and collision queries for a single robot instance."""
 
-    def __init__(self):
-        self.model = mujoco.MjModel.from_xml_string(PANDA_XML)
-        self.data = mujoco.MjData(self.model)
-        self.lo, self.hi = self.model.jnt_range.T
-        self._tcp = self.model.site('tcp').id
-        self._table = self.model.geom('table').id
+    def __init__(self, model=None):
+        """Wraps `model` (default: the capsule Panda); arm joints come first.
+
+        Args:
+            model: Optional compiled MjModel with a 'tcp' site and 'table' geom.
+        """
+        if model is None:
+            model = mujoco.MjModel.from_xml_string(PANDA_XML)
+        hinge = model.jnt_type[:7] == mujoco.mjtJoint.mjJNT_HINGE
+        if not hinge.all() or list(model.jnt_dofadr[:7]) != list(range(7)):
+            raise ValueError('first 7 joints must be the arm hinges')
+        self.model = model
+        self.data = mujoco.MjData(model)
+        if model.nkey:
+            mujoco.mj_resetDataKeyframe(model, self.data, 0)
+        self.lo, self.hi = model.jnt_range[:7].T
+        self._tcp = model.site('tcp').id
+        self._table = model.geom('table').id
+        arm_root = model.body_rootid[model.jnt_bodyid[0]]
+        self._arm = model.body_rootid[model.geom_bodyid] == arm_root
 
     def forward(self, q):
         """Sets joints and runs kinematics plus collision detection."""
-        self.data.qpos[:] = q
+        self.data.qpos[:7] = q
         mujoco.mj_fwdPosition(self.model, self.data)
 
     def tcp_pose(self):
@@ -93,9 +107,10 @@ class Panda:
 
     def jacobian(self):
         """Returns the (6, 7) world-frame TCP Jacobian at the current state."""
-        jacp, jacr = np.zeros((3, 7)), np.zeros((3, 7))
+        nv = self.model.nv
+        jacp, jacr = np.zeros((3, nv)), np.zeros((3, nv))
         mujoco.mj_jacSite(self.model, self.data, jacp, jacr, self._tcp)
-        return np.vstack([jacp, jacr])
+        return np.vstack([jacp, jacr])[:, :7]
 
     def pose_error(self, pos, rot):
         """Returns (6,) world-frame [position, rotvec] error to target."""
@@ -136,11 +151,14 @@ class Panda:
         return q, _converged(self.pose_error(pos, rot), pos_tol, rot_tol)
 
     def collisions(self):
-        """Returns contacts at the current state as 'self' or 'table' labels."""
+        """Labels arm contacts 'self' (arm-arm) or 'table'; ignores the rest."""
         labels = []
         for c in self.data.contact[:self.data.ncon]:
-            labels.append('table' if self._table in (c.geom1, c.geom2)
-                          else 'self')
+            arm1, arm2 = self._arm[c.geom1], self._arm[c.geom2]
+            if arm1 and arm2:
+                labels.append('self')
+            elif (arm1 or arm2) and self._table in (c.geom1, c.geom2):
+                labels.append('table')
         return labels
 
     def min_singular_value(self):
