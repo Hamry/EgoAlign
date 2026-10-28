@@ -231,3 +231,4 @@ CLAUDE.local.md
 #   Contents are ignored; .gitkeep keeps the folder present in clones.
 ai-docs/*
 !ai-docs/.gitkeep
+egoalign_data/
