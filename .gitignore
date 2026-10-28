@@ -218,3 +218,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Claude Code
+#   Shared config (.claude/settings.json, CLAUDE.md, .claude/agents|commands|skills) is committed.
+#   Personal settings, local memory, and worktrees stay local.
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+
+# AI-specific documentation (local notes, research, plans for AI agents)
+#   Contents are ignored; .gitkeep keeps the folder present in clones.
+ai-docs/*
+!ai-docs/.gitkeep
