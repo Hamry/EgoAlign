@@ -66,7 +66,8 @@ def _extract(video_path, fps, fov_deg, keep_thumbnails, max_frames):
             landmarks.append(tracker.process(frame))
             if keep_thumbnails:
                 thumbs.append(align.thumbnail(frame))
-    return np.array(landmarks).reshape(-1, 21, 3), thumbs, tracker.left_votes > 0
+    left = tracker.left_votes > 0
+    return np.array(landmarks).reshape(-1, 21, 3), thumbs, left
 
 
 def process(video_path, encoder=None, camera_rpy=(0.0, 0.0, 0.0),

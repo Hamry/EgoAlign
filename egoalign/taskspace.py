@@ -4,7 +4,8 @@ import dataclasses
 
 import numpy as np
 
-WRIST, THUMB_TIP, INDEX_MCP, INDEX_TIP, MIDDLE_MCP, PINKY_MCP = 0, 4, 5, 8, 9, 17
+WRIST, THUMB_TIP, INDEX_MCP, INDEX_TIP = 0, 4, 5, 8
+MIDDLE_MCP, PINKY_MCP = 9, 17
 
 # Camera (x right, y down, z forward) to robot base (x forward, y left, z up).
 CAM_TO_ROBOT = np.array([[0.0, 0.0, 1.0], [-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
@@ -60,7 +61,7 @@ def _unit(v):
 
 
 def hand_frame(landmarks, left=False):
-    """Returns (T, 3, 3) hand rotations; z is the approach axis wrist->knuckles."""
+    """Returns (T, 3, 3) hand rotations; z is wrist->knuckles (approach)."""
     z = _unit(landmarks[:, MIDDLE_MCP] - landmarks[:, WRIST])
     across = landmarks[:, PINKY_MCP] - landmarks[:, INDEX_MCP]
     if left:
@@ -117,7 +118,7 @@ def to_trajectory(landmarks, fps, camera_rpy=(0.0, 0.0, 0.0),
             for frames without a hand.
         fps: Video frame rate.
         camera_rpy: Camera tilt from the canonical forward view [rad], as
-            roll-pitch-yaw about the camera axes (x right, y down, z forward).
+            rotations about camera x (right), y (down), z (forward).
             Canonical points are `euler_to_matrix(camera_rpy) @ p_cam`.
         home: Robot-frame position the first wrist sample maps to [m].
         grip_threshold: Thumb-index tip distance below which the gripper

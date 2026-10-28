@@ -15,7 +15,7 @@ def thumbnail(rgb, size=224):
 
 
 class Encoder:
-    """open_clip image encoder yielding L2-normalized, view-robust embeddings."""
+    """open_clip image encoder yielding L2-normalized embeddings."""
 
     def __init__(self, model='ViT-B-32', pretrained='laion2b_s34b_b79k',
                  device=None, batch_size=32):
