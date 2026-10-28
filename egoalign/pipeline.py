@@ -23,6 +23,8 @@ class Result:
         accepted: True if the (possibly trimmed) trajectory is exportable.
         frames: Number of decoded video frames.
         timings: Seconds spent per stage.
+        extrinsics: Camera registration used, or None.
+        fov_deg: Horizontal field of view assumed [deg].
     """
 
     trajectory: taskspace.Trajectory
@@ -31,6 +33,8 @@ class Result:
     accepted: bool
     frames: int
     timings: dict
+    extrinsics: 'register.Extrinsics | None' = None
+    fov_deg: float = 65.0
 
     @property
     def throughput_fps(self):
@@ -118,4 +122,5 @@ def process(video_path, encoder=None, camera_rpy=(0.0, 0.0, 0.0),
     if encoder is not None and accepted:
         embeddings = encoder(thumbs[:len(traj)])
     timings['alignment'] = time.perf_counter() - t0
-    return Result(traj, embeddings, verdict, accepted, len(landmarks), timings)
+    return Result(traj, embeddings, verdict, accepted, len(landmarks), timings,
+                  extrinsics, fov_deg)

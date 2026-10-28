@@ -73,7 +73,7 @@ def register(rgb, fov_deg, marker_xy, marker_size, marker_id=0):
 
 def register_video(path, fov_deg, marker_xy, marker_size, marker_id=0,
                    max_frames=60):
-    """Registers from the first frame of a static-camera video showing the marker.
+    """Registers from the first frame of a video that shows the marker.
 
     Raises:
         ValueError: If no frame among the first `max_frames` shows the marker.
