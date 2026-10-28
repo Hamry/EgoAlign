@@ -6,6 +6,7 @@ import math
 import pathlib
 
 from egoalign import align
+from egoalign import augment
 from egoalign import export
 from egoalign import pipeline
 from egoalign import register
@@ -27,6 +28,23 @@ def _process(args):
         report['episode'] = str(export.save_episode(out, result,
                                                     args.instruction))
     print(json.dumps(report, indent=2))
+
+
+def _augment(args):
+    traj, scene, instruction = export.load_trajectory(args.episode)
+    if 'cam_rot' not in scene:
+        raise SystemExit('episode has no camera registration; re-run '
+                         '`egoalign process` with --marker-xy')
+    stem = pathlib.Path(args.episode).stem
+    episodes = augment.generate(traj, args.episodes, scene_kwargs=scene,
+                                radius=args.radius, seed=args.seed,
+                                width=args.size, height=args.size)
+    count = 0
+    for count, (mug_xy, rollout) in enumerate(episodes, 1):
+        out = export.save_rollout(args.out / f'{stem}_{count:03d}.npz',
+                                  rollout, instruction, traj.fps)
+        print(f'{out}  mug at {mug_xy.round(3).tolist()}')
+    print(f'{count}/{args.episodes} successful episodes')
 
 
 def _serve(args):
@@ -56,6 +74,17 @@ def main(argv=None):
     proc.add_argument('--no-embed', action='store_true',
                       help='skip CLIP embeddings')
     proc.set_defaults(func=_process)
+
+    aug = sub.add_parser('augment',
+                         help='render sim robot episodes from a demo')
+    aug.add_argument('episode', help='.npz from `process` with --marker-xy')
+    aug.add_argument('--episodes', type=int, default=50)
+    aug.add_argument('--radius', type=float, default=0.08,
+                     help='max mug offset from the demo [m]')
+    aug.add_argument('--size', type=int, default=256, help='image size [px]')
+    aug.add_argument('--seed', type=int, default=0)
+    aug.add_argument('--out', type=pathlib.Path, default='rollouts')
+    aug.set_defaults(func=_augment)
 
     serve = sub.add_parser('serve', help='run the upload API')
     serve.add_argument('--host', default='127.0.0.1')
