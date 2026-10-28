@@ -71,7 +71,8 @@ def _extract(video_path, fps, fov_deg, keep_thumbnails, max_frames):
 
 
 def process(video_path, encoder=None, camera_rpy=(0.0, 0.0, 0.0),
-            fov_deg=65.0, trim=True, min_frames=15, max_frames=3600):
+            fov_deg=65.0, trim=True, min_frames=15, max_frames=3600,
+            extrinsics=None):
     """Turns a POV video into a validated robot trajectory.
 
     Args:
@@ -82,6 +83,7 @@ def process(video_path, encoder=None, camera_rpy=(0.0, 0.0, 0.0),
         trim: Keep the valid prefix of an invalid trajectory.
         min_frames: Shortest prefix worth keeping when trimming.
         max_frames: Longest video accepted, bounding memory.
+        extrinsics: Optional `register.Extrinsics` for absolute placement.
 
     Returns:
         A `Result`.
@@ -97,7 +99,8 @@ def process(video_path, encoder=None, camera_rpy=(0.0, 0.0, 0.0),
     timings['extraction'] = time.perf_counter() - t0
 
     t0 = time.perf_counter()
-    traj = taskspace.to_trajectory(landmarks, fps, camera_rpy, left=left)
+    traj = taskspace.to_trajectory(landmarks, fps, camera_rpy, left=left,
+                                   extrinsics=extrinsics)
     timings['mapping'] = time.perf_counter() - t0
 
     t0 = time.perf_counter()

@@ -71,6 +71,12 @@ def video_fps(path, default=30.0):
     return fps if 0 < fps <= 240 else default
 
 
+def intrinsics(width, height, fov_deg):
+    """Pinhole matrix with principal point at the image centre."""
+    f = width / 2 / np.tan(np.radians(fov_deg) / 2)
+    return np.array([[f, 0, width / 2], [0, f, height / 2], [0, 0, 1.0]])
+
+
 def lift(image_lm, world_lm, width, height, fov_deg):
     """Places metric hand landmarks in the camera frame via pinhole fitting.
 
@@ -88,9 +94,10 @@ def lift(image_lm, world_lm, width, height, fov_deg):
         (21, 3) landmarks in the camera frame [m]; all-NaN if the fit puts
         the hand behind the camera.
     """
-    f = width / 2 / np.tan(np.radians(fov_deg) / 2)
-    u = image_lm[:, 0] * width - width / 2
-    v = image_lm[:, 1] * height - height / 2
+    k = intrinsics(width, height, fov_deg)
+    f = k[0, 0]
+    u = image_lm[:, 0] * width - k[0, 2]
+    v = image_lm[:, 1] * height - k[1, 2]
     wx, wy, wz = world_lm.T
     zeros = np.zeros_like(u)
     a = np.vstack([np.column_stack([np.full_like(u, f), zeros, -u]),

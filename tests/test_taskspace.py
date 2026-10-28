@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from egoalign import register
 from egoalign import taskspace
 
 
@@ -73,3 +74,16 @@ def test_left_hand_matches_mirrored_right_hand():
 def test_gripper_hysteresis():
     states = taskspace.gripper_states([0.05, 0.03, 0.05, 0.07], 0.04, 0.06)
     assert states.tolist() == [False, True, True, False]
+
+
+def test_extrinsics_place_grasp_point_absolutely():
+    lm = np.stack([_hand(np.array([0.0, 0.0, 0.5]))] * 3)
+    ext = register.Extrinsics(taskspace.CAM_TO_ROBOT, np.array([0, 0, 0.4]))
+    traj = taskspace.to_trajectory(lm, 30, window=1, extrinsics=ext)
+    grasp = (lm[0, taskspace.THUMB_TIP] + lm[0, taskspace.INDEX_TIP]) / 2
+    np.testing.assert_allclose(traj.poses[:, :3],
+                               np.tile(ext.to_robot(grasp), (3, 1)))
+    # Fingers (gripper y) close along the palm normal (hand x).
+    gripper_y = taskspace.euler_to_matrix(traj.poses[0, 3:])[:, 1]
+    palm_normal = ext.rot @ taskspace.hand_frame(lm[:1])[0][:, 0]
+    np.testing.assert_allclose(np.abs(gripper_y @ palm_normal), 1, atol=1e-9)
