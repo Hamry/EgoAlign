@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "egoalign"
+version = "0.1.0"
+description = "Zero-hardware VLA fine-tuning data from egocentric human video."
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    "numpy>=2.0",
+    "mujoco>=3.1",
+    "mediapipe>=0.10.14",
+    "opencv-python>=4.9",
+    "fastapi>=0.110",
+    "python-multipart>=0.0.9",
+    "uvicorn>=0.29",
+]
+
+[project.optional-dependencies]
+align = ["torch>=2.2", "open_clip_torch>=2.24"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.setuptools.packages.find]
+include = ["egoalign*"]
