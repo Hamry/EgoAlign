@@ -47,6 +47,11 @@ def _augment(args):
     print(f'{count}/{args.episodes} successful episodes')
 
 
+def _marker(args):
+    path = register.write_marker(args.out, args.id)
+    print(f'wrote {path}; print it, then measure the black square')
+
+
 def _serve(args):
     import uvicorn  # pylint: disable=import-outside-toplevel
     uvicorn.run('egoalign.api:app', host=args.host, port=args.port)
@@ -85,6 +90,13 @@ def main(argv=None):
     aug.add_argument('--seed', type=int, default=0)
     aug.add_argument('--out', type=pathlib.Path, default='rollouts')
     aug.set_defaults(func=_augment)
+
+    marker = sub.add_parser('marker', help='write a printable ArUco marker')
+    marker.add_argument('out', nargs='?', type=pathlib.Path,
+                        default='marker.png')
+    marker.add_argument('--id', type=int, default=0, choices=range(50),
+                        metavar='0-49')
+    marker.set_defaults(func=_marker)
 
     serve = sub.add_parser('serve', help='run the upload API')
     serve.add_argument('--host', default='127.0.0.1')

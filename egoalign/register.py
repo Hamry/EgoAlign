@@ -6,6 +6,7 @@ left-to-right direction is robot +x and bottom-to-top is robot +y.
 
 import contextlib
 import dataclasses
+import pathlib
 
 import cv2
 import numpy as np
@@ -30,6 +31,24 @@ class Extrinsics:
     def to_robot(self, points):
         """Maps (..., 3) camera-frame points into the robot frame."""
         return points @ self.rot.T + self.pos
+
+
+def write_marker(path, marker_id=0, pixels=800):
+    """Saves a printable marker PNG with a white quiet zone; returns its path.
+
+    After printing, measure the black square's side for `--marker-size`.
+    """
+    marker = cv2.aruco.generateImageMarker(
+        cv2.aruco.getPredefinedDictionary(DICTIONARY), marker_id, pixels)
+    border = pixels // 6  # At least one marker cell of quiet zone.
+    marker = cv2.copyMakeBorder(marker, border, border, border, border,
+                                cv2.BORDER_CONSTANT, value=255)
+    path = pathlib.Path(path)
+    if path.suffix.lower() != '.png':
+        path = path.with_suffix('.png')
+    if not cv2.imwrite(str(path), marker):
+        raise OSError(f'cannot write {path}')
+    return path
 
 
 def marker_corners(center_xy, size):

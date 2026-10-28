@@ -41,3 +41,13 @@ def test_register_recovers_camera_pose():
 def test_register_without_marker_returns_none():
     assert register.register(np.zeros((H, W, 3), np.uint8), FOV,
                              (0, 0), 0.1) is None
+
+
+def test_written_marker_is_detectable(tmp_path):
+    path = tmp_path / 'marker.png'
+    register.write_marker(path, marker_id=3)
+    gray = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+    detector = cv2.aruco.ArucoDetector(
+        cv2.aruco.getPredefinedDictionary(register.DICTIONARY))
+    _, ids, _ = detector.detectMarkers(gray)
+    assert ids is not None and ids.ravel().tolist() == [3]
