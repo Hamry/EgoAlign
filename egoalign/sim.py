@@ -1,4 +1,7 @@
-"""MuJoCo scene: Menagerie Franka Panda, table, mug and a POV camera."""
+"""MuJoCo scene: Menagerie Franka Panda, table, mug and a POV camera.
+
+The mug is a 6x6x10 cm box stand-in: flat faces give the pads a stable grasp.
+"""
 
 import os
 import pathlib
@@ -12,8 +15,9 @@ MENAGERIE_SHA = '71f066ad0be9cd271f7ed58c030243ef157af9f4'
 _RAW = ('https://raw.githubusercontent.com/google-deepmind/mujoco_menagerie/'
         f'{MENAGERIE_SHA}/franka_emika_panda/')
 
-MUG_RADIUS, MUG_HALF_HEIGHT = 0.03, 0.05
+MUG_HALF_WIDTH, MUG_HALF_HEIGHT = 0.03, 0.05
 TCP_OFFSET = 0.1034
+GRIP_GAIN_SCALE = 3.0
 # OpenCV camera (x right, y down, z forward) to MuJoCo camera (z backward).
 CV_TO_MJ = np.diag([1.0, -1.0, -1.0])
 
@@ -73,6 +77,11 @@ def build(mug_xy=(0.5, 0.0), cam_pos=(1.0, 0.0, 0.6), cam_rot=None,
     """
     spec = mujoco.MjSpec.from_file(str(panda_xml()))
     spec.body('hand').add_site(name='tcp', pos=[0, 0, TCP_OFFSET])
+    # Stock gripper servo squeezes ~3 N; stiffen it for dynamic lifts.
+    grip = spec.actuator('actuator8')
+    grip.gainprm[0] *= GRIP_GAIN_SCALE
+    grip.biasprm[1] *= GRIP_GAIN_SCALE
+    grip.biasprm[2] *= GRIP_GAIN_SCALE
     world = spec.worldbody
     world.add_light(pos=[0.5, 0, 1.5], dir=[0, 0, -1], diffuse=[0.8] * 3)
     world.add_geom(name='table', type=mujoco.mjtGeom.mjGEOM_BOX,
@@ -80,9 +89,10 @@ def build(mug_xy=(0.5, 0.0), cam_pos=(1.0, 0.0, 0.6), cam_rot=None,
                    rgba=[0.55, 0.4, 0.3, 1])
     mug = world.add_body(name='mug', pos=[*mug_xy, MUG_HALF_HEIGHT])
     mug.add_freejoint(name='mug')
-    mug.add_geom(name='mug', type=mujoco.mjtGeom.mjGEOM_CYLINDER,
-                 size=[MUG_RADIUS, MUG_HALF_HEIGHT, 0], mass=0.2,
-                 friction=[1.5, 0.01, 0.001], rgba=[0.9, 0.2, 0.2, 1])
+    mug.add_geom(name='mug', type=mujoco.mjtGeom.mjGEOM_BOX,
+                 size=[MUG_HALF_WIDTH, MUG_HALF_WIDTH, MUG_HALF_HEIGHT],
+                 mass=0.1, condim=4,
+                 friction=[2.0, 0.05, 0.001], rgba=[0.9, 0.2, 0.2, 1])
     if cam_rot is None:
         cam_rot = look_at(cam_pos, [*mug_xy, MUG_HALF_HEIGHT])
     fovy = 2 * np.degrees(np.arctan(
